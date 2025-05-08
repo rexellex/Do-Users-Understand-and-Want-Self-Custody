@@ -1,0 +1,428 @@
+
+
+# libraries
+
+library(tidyverse)
+library(janitor)
+library(car)
+library(broom)
+library(ggplot2)
+library(psych)
+library(robustbase)
+library(MASS)
+library(dplyr)
+library(brant)
+library(pscl)
+library(knitr)
+library(performance)
+library(DescTools)
+library(margins)
+
+
+# formatting data
+data <- clean_names(data)
+
+
+data <- data %>%
+    rename(
+        Gender = what_is_your_gender,
+        Age = what_is_your_age,
+        Education = what_is_your_highest_education_level,
+        Industry = in_which_industry_do_you_primarily_work,
+        Knowledge = do_you_know_who_has_access_to_the_funds_stored_in_self_custody_wallet,
+        BTCUsage = do_you_currently_use_a_bitcoin_self_custody_wallet,
+        PrivateKeyLoss = have_you_ever_lost_your_private_key_and_consequently_your_digital_assets,
+        PE1 = using_a_self_custody_bitcoin_wallet_is_useful_for_managing_bitcoin_transactions,
+        PE2 = using_a_self_custody_bitcoin_wallet_helps_accomplish_tasks_more_effectively_when_storing_and_transacting_bitcoin,
+        PE3 = using_a_self_custody_bitcoin_wallet_can_improve_productivity_in_storing_and_transacting_bitcoin,
+        PE4 = how_strongly_do_you_agree_that_using_a_self_custody_bitcoin_wallet_will_enhance_your_financial_performance,
+        EE1 = how_strongly_do_you_agree_that_interacting_with_a_self_custody_bitcoin_wallet_is_clear_and_understandable,
+        EE2 = how_strongly_do_you_agree_that_becoming_skillful_at_using_a_self_custody_bitcoin_wallet_is_easy_for_you,
+        EE3 = how_strongly_do_you_agree_that_you_find_a_self_custody_bitcoin_wallet_easy_to_use,
+        EE4 = how_strongly_do_you_agree_that_learning_how_to_use_a_self_custody_bitcoin_wallet_is_easy,
+        SI1 = people_who_influence_my_behavior_believe_i_should_use_a_self_custody_bitcoin_wallet,
+        SI2 = people_who_are_important_to_me_think_i_should_use_a_self_custody_bitcoin_wallet,
+        SI3 = influential_figures_in_the_cryptocurrency_community_endorse_using_self_custody_bitcoin_wallets,
+        SI4 = the_widespread_adoption_of_self_custody_bitcoin_wallets_in_my_community_would_influence_my_decision_to_use_one,
+        FC1 = i_read_news_and_other_resources_about_self_custody_bitcoin_wallets,
+        FC2 = i_discuss_the_security_and_technical_aspects_of_self_custody_bitcoin_wallets_with_peers_or_within_my_network,
+        FC3 = self_custody_bitcoin_wallets_are_not_compatible_with_other_systems_i_use,
+        FC4 = i_can_obtain_assistance_from_others_when_i_encounter_difficulties_with_a_self_custody_bitcoin_wallet,
+        PIIT1 = when_new_technologies_become_available_i_seek_ways_to_experiment_with_them,
+        PIIT2 = i_am_often_the_first_among_my_peers_to_use_new_technologies_like_self_custody_bitcoin_wallet,
+        PIIT3 = i_am_generally_reluctant_to_use_new_technologies_such_as_self_custody_bitcoin_wallets,
+        PIIT4 = i_actively_engage_in_exploring_new_technologies_like_self_custody_bitcoin_wallets,
+        PC1 = i_feel_i_have_control_over_managing_and_securing_my_bitcoin_when_using_a_self_custody_wallet_without_interference_from_third_parties,
+        PC2 = using_a_self_custody_bitcoin_wallet_my_bitcoin_is_within_my_control,
+        BI1 = i_intend_to_use_a_self_custody_bitcoin_wallet_in_the_future,
+        BI2 = i_will_always_try_to_use_a_self_custody_bitcoin_wallet_in_my_daily_life,
+        BI3 = i_plan_to_use_a_self_custody_bitcoin_wallet_frequently
+    )
+
+
+
+
+# reverse FC3
+data$FC3 <- 8 - data$FC3
+
+# Reverse PIIT3
+data$PIIT3 <- 8 - data$PIIT3
+
+
+# categorical to factors
+data <- data %>%
+  mutate(
+    Gender = as.factor(Gender),
+    Education = as.factor(Education),
+    Industry = as.factor(Industry),
+    Knowledge = as.factor(Knowledge)
+  )
+
+
+
+-------------------------Reliability Analysis---------------------------------------
+
+
+
+# Cronbach's alpha
+calculate_alpha <- function(items, scale_name) {
+  alpha_result <- psych::alpha(data[, items])
+  print(paste(scale_name, "Cronbach's alpha:", round(alpha_result$total$raw_alpha, 3)))
+  print(alpha_result$item.stats)  								# for item-total correlations
+}
+
+# alpha for each scale
+calculate_alpha(c("PE1", "PE2", "PE3", "PE4"), "Performance Expectancy")
+calculate_alpha(c("EE1", "EE2", "EE3", "EE4"), "Effort Expectancy")
+calculate_alpha(c("SI1", "SI2", "SI3", "SI4"), "Social Influence")
+calculate_alpha(c("FC1", "FC2", "FC3", "FC4"), "Facilitating Conditions")
+calculate_alpha(c("PIIT1", "PIIT2", "PIIT3", "PIIT4"), "Personal Innovativeness in IT")
+calculate_alpha(c("PC1", "PC2"), "Perceived Control")
+calculate_alpha(c("BI1", "BI2", "BI3"), "Behavioral Intention")
+
+
+
+# Performance Expectancy
+pe_alpha <- psych::alpha(data[, c("PE1", "PE2", "PE3", "PE4")])
+
+# Effort Expectancy
+ee_alpha <- psych::alpha(data[, c("EE1", "EE2", "EE3", "EE4")])
+
+# Social Influence
+si_alpha <- psych::alpha(data[, c("SI1", "SI2", "SI3", "SI4")])
+
+# Facilitating Conditions
+fc_alpha <- psych::alpha(data[, c("FC1", "FC2", "FC3", "FC4")])
+
+# Personal Innovativeness in IT
+piit_alpha <- psych::alpha(data[, c("PIIT1", "PIIT2", "PIIT3", "PIIT4")])
+
+# Perceived Control
+pc_alpha <- psych::alpha(data[, c("PC1", "PC2")])
+
+# Behavioral Intention
+bi_alpha <- psych::alpha(data[, c("BI1", "BI2", "BI3")])
+
+# Print results
+print(paste("PE Cronbach's alpha:", round(pe_alpha$total$raw_alpha, 3)))
+print(paste("EE Cronbach's alpha:", round(ee_alpha$total$raw_alpha, 3)))
+print(paste("SI Cronbach's alpha:", round(si_alpha$total$raw_alpha, 3)))
+print(paste("FC Cronbach's alpha:", round(fc_alpha$total$raw_alpha, 3)))
+print(paste("PIIT Cronbach's alpha:", round(piit_alpha$total$raw_alpha, 3)))
+print(paste("PC Cronbach's alpha:", round(pc_alpha$total$raw_alpha, 3)))
+print(paste("BI Cronbach's alpha:", round(bi_alpha$total$raw_alpha, 3)))
+
+
+
+
+
+
+
+----------------------------Exploratory Factor Analysis (EFA)----------------------------
+
+# combine all items
+all_items <- data[, c("PE1", "PE2", "PE3", "PE4",
+                      "EE1", "EE2", "EE3", "EE4",
+                      "SI1", "SI2", "SI3", "SI4",
+                      "FC1", "FC2", "FC3", "FC4",
+                      "PIIT1", "PIIT2", "PIIT3", "PIIT4",
+                      "PC1", "PC2",
+                      "BI1", "BI2", "BI3")]
+
+# number of factors, checked 3 and 7 factor solutions
+fa.parallel(all_items, fm = "ml", fa = "fa")
+
+
+# EFA formula
+efa_result <- fa(all_items, nfactors = [PUT THE FACTOR NUMBER], rotate = "varimax", fm = "ml")
+
+# Print loadings
+print(efa_result$loadings, cutoff = 0.3)
+
+# Print correlations
+print(efa_result$score.cor)
+
+
+
+
+---------------------------- Getting Average Scores------------------------------------
+
+# Compute average scores for each construct
+data <- data %>%
+    mutate(
+        PE = rowMeans(across(starts_with("pe")), na.rm = TRUE),
+        EE = rowMeans(across(starts_with("ee")), na.rm = TRUE),
+        SI = rowMeans(across(starts_with("si")), na.rm = TRUE),
+        FC = rowMeans(across(starts_with("fc")), na.rm = TRUE),
+        PIIT = rowMeans(across(starts_with("piit")), na.rm = TRUE),
+        PC = rowMeans(across(starts_with("pc")), na.rm = TRUE),
+        BI = rowMeans(across(starts_with("bi")), na.rm = TRUE)
+    )
+
+
+data <- data %>%
+    mutate(
+        PE = rowMeans(across(starts_with("pe")), na.rm = TRUE),
+        EE = rowMeans(across(starts_with("ee")), na.rm = TRUE),
+        SI = rowMeans(across(starts_with("si")), na.rm = TRUE),
+        FC = rowMeans(select(., FC1, FC2, FC4), na.rm = TRUE),  # Exclude FC3
+        PIIT = rowMeans(across(starts_with("piit")), na.rm = TRUE),
+        PC = rowMeans(across(starts_with("pc")), na.rm = TRUE),
+        BI = rowMeans(across(starts_with("bi")), na.rm = TRUE)
+    )
+
+
+
+
+
+
+--------------------------Correlation Matrix-------------------------------
+
+
+
+constructs_data <- data[, c("PE", "EE", "SI", "FC", "PIIT", "PC", "BI")]
+
+cor_matrix_constructs <- cor(constructs_data, use="complete.obs")
+
+print(cor_matrix_constructs)
+
+
+
+
+-------------------------------Model (Ord log Regression)-----------------------------------------------
+
+
+# round the BI composite score to the nearest int to categorize it:
+data$BI_ordinal <- round(data$BI)
+data$BI_ordinal <- factor(data$BI_ordinal, ordered = TRUE)
+
+
+# baseline model with controls only
+baseline_ordinal_model <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge, data = data, Hess = TRUE)
+
+# summary of the baseline model
+summary_baseline_ordinal_model <- summary(baseline_ordinal_model)
+
+
+print(summary_baseline_ordinal_model)
+
+
+# Models with each IV separately
+model_PE <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge + PE, data = data, Hess = TRUE)
+model_EE <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge + EE, data = data, Hess = TRUE)
+model_SI <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge + SI, data = data, Hess = TRUE)
+model_FC <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge + FC, data = data, Hess = TRUE)
+model_PIIT <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge + PIIT, data = data, Hess = TRUE)
+model_PC <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge + PC, data = data, Hess = TRUE)
+
+# Model with all IVs together
+model_all_IVs <- polr(BI_ordinal ~ Gender + Age + Education + Industry + Knowledge + PE + EE + SI + FC + PIIT + PC, data = data, Hess = TRUE)
+
+# print summaries
+summary_PE <- summary(model_PE)
+summary_EE <- summary(model_EE)
+summary_SI <- summary(model_SI)
+summary_FC <- summary(model_FC)
+summary_PIIT <- summary(model_PIIT)
+summary_PC <- summary(model_PC)
+summary_all_IVs <- summary(model_all_IVs)
+
+# to print the summaries in console
+print(summary_PE)
+print(summary_EE)
+print(summary_SI)
+print(summary_FC)
+print(summary_PIIT)
+print(summary_PC)
+print(summary_all_IVs)
+
+
+
+
+
+-----------------------------------------p-values-----------------------------------------------------
+
+
+# to calculate p-values
+calculate_p_values <- function(model) {
+  coef_table <- coef(summary(model))
+  p_values <- pnorm(abs(coef_table[, "t value"]), lower.tail = FALSE) * 2
+  return(p_values)
+}
+
+# p-values for each model
+p_values_baseline <- calculate_p_values(baseline_ordinal_model)
+p_values_PE <- calculate_p_values(model_PE)
+p_values_EE <- calculate_p_values(model_EE)
+p_values_SI <- calculate_p_values(model_SI)
+p_values_FC <- calculate_p_values(model_FC)
+p_values_PIIT <- calculate_p_values(model_PIIT)
+p_values_PC <- calculate_p_values(model_PC)
+p_values_all_IVs <- calculate_p_values(model_all_IVs)
+
+
+# table of p-values
+create_p_value_table <- function(p_values, model_name) {
+  df <- data.frame(
+    Variable = names(p_values),
+    P_Value = p_values
+  )
+  
+  # round p-values, 4 decimal
+  df$P_Value <- round(df$P_Value, 4)
+  
+  # asterisks for significance levels
+  df$Significance <- ifelse(df$P_Value < 0.001, "***",
+                     ifelse(df$P_Value < 0.01, "**",
+                     ifelse(df$P_Value < 0.05, "*",
+                     ifelse(df$P_Value < 0.1, ".", ""))))
+  
+  # p-value and significance combo
+  df$P_Value <- paste(df$P_Value, df$Significance)
+  
+  # remove the separate Significance column
+  df$Significance <- NULL
+  
+  # table caption
+  caption <- paste("P-values for", model_name)
+  
+  # create and print the table
+  print(kable(df, caption = caption, align = c("l", "r")))
+}
+
+# Use the function for each model
+create_p_value_table(p_values_baseline, "Baseline Model")
+create_p_value_table(p_values_PE, "PE Model")
+create_p_value_table(p_values_EE, "EE Model")
+create_p_value_table(p_values_SI, "SI Model")
+create_p_value_table(p_values_FC, "FC Model")
+create_p_value_table(p_values_PIIT, "PIIT Model")
+create_p_value_table(p_values_PC, "PC Model")
+create_p_value_table(p_values_all_IVs, "All IVs Model")
+
+
+
+
+
+
+
+-----------------------Check for multicollinearity------------------------------------------------------
+vif(model)
+
+
+
+# McFadden's R-squared
+mcfadden <- pR2(model_all_IVs)["McFadden"]
+
+print(paste("McFadden's R-squared:", round(mcfadden, 3)))
+
+# Interpretation: McFadden's R-squared values between 0.2 and 0.4 are considered excellent fit.
+
+
+
+
+---------------------------------Odds Ratios and Confidence Intervals--------------------------------------------
+
+# separate coefficients from thresholds
+coef_names <- names(coef(model_all_IVs))
+
+
+# calculate odds ratios (only for coefficients, not thresholds)
+odds_ratios <- exp(summary_table[coef_names, "Value"])
+
+# confidence intervals for odds ratios
+ci <- confint(model_all_IVs)
+odds_ratios_ci <- exp(ci[coef_names,])
+
+
+# combo odds ratios and CIs (only for coefficients, not thresholds)
+odds_table <- cbind(
+  OR = odds_ratios[coef_names],
+  CI_lower = odds_ratios_ci[coef_names,1],
+  CI_upper = odds_ratios_ci[coef_names,2]
+)
+
+
+
+---------------------------------Model Fit Statistics-----------------------------------------------------------
+
+# Log-likelihood
+logLik <- logLik(model_all_IVs)
+
+# AIC and BIC
+aic <- AIC(model_all_IVs)
+bic <- BIC(model_all_IVs)
+
+# Pseudo R-squared measures
+# Null model for comparison
+null_model <- polr(BI_ordinal ~ 1, data = data, Hess = TRUE)
+
+# McFadden's R2
+mcfadden <- 1 - logLik(model_all_IVs)/logLik(null_model)
+
+# Nagelkerke R2
+nagelkerke <- PseudoR2(model_all_IVs, which = "Nagelkerke")
+
+# Cox & Snell R2
+coxsnell <- PseudoR2(model_all_IVs, which = "CoxSnell")
+
+# Likelihood Ratio Test
+model_comparison <- anova(null_model, model_all_IVs, test = "Chisq")
+
+# Classification Accuracy
+predicted_classes <- predict(model_all_IVs, type = "class")
+actual_classes <- data$BI_ordinal
+confusion_matrix <- table(predicted_classes, actual_classes)
+accuracy <- sum(diag(confusion_matrix))/sum(confusion_matrix)
+
+
+# results table (not thresholds)
+results_summary <- data.frame(
+  Coefficient = coef(model_all_IVs),
+  SE = summary_table[coef_names, "Std. Error"],
+  z_value = summary_table[coef_names, "t value"],
+  p_value = p_values[coef_names],
+  OR = odds_ratios[coef_names],
+  CI_lower = odds_ratios_ci[coef_names, 1],
+  CI_upper = odds_ratios_ci[coef_names, 2]
+)
+
+
+# Print results
+cat("\nModel Summary Statistics:\n")
+cat("Log-Likelihood:", logLik, "\n")
+cat("AIC:", aic, "\n")
+cat("BIC:", bic, "\n")
+cat("McFadden R2:", mcfadden, "\n")
+cat("Nagelkerke R2:", nagelkerke, "\n")
+cat("Cox & Snell R2:", coxsnell, "\n")
+cat("\nClassification Accuracy:", accuracy, "\n")
+
+
+# Print likelihood
+print(model_comparison)
+
+
+# Print odds ratios with conf int
+print("Odds Ratios with 95% Confidence Intervals:")
+print(odds_table)
